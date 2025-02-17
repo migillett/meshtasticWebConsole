@@ -1,0 +1,8 @@
+flask
+meshtastic
+protobuf
+pubsub
+threading
+time
+datetime
+google.protobuf

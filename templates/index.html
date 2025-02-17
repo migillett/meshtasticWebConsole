@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meshtastic Console</title>
+    <style>
+        body {
+            background-color: #303030;
+            color: #00cc00;
+            font-family: monospace;
+        }
+        h2 {
+            text-align: left;
+        }
+        #console {
+            white-space: pre-wrap;
+            overflow-y: auto;
+            height: 90vh;
+            border: 1px solid #00cc00;
+            padding: 10px;
+        }
+        .url {
+            color: lightblue;
+        }
+        .separator {
+            border: none;
+            border-top: 1px solid #909090;
+            margin: 18px 0 0 0;  /* Adds vertical spacing */
+        }
+    </style>
+</head>
+<body>
+    <h2>Meshtastic Console</h2>
+    <div id="console"></div>
+    <script>
+    const eventSource = new EventSource("/stream");
+    eventSource.onmessage = function(event) {
+        const consoleDiv = document.getElementById("console");
+
+        let message = event.data;
+
+        // Regular expression to match URLs
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        // Regular expression to match separator lines of 6+ dashes
+        const separatorRegex = /^-{6,}$/gm;
+
+        // Replace URLs with clickable light-blue links
+        message = message.replace(urlRegex, url =>
+            `<a href="${url}" class="url" target="_blank" rel="noopener noreferrer">${url}</a>`
+        );
+
+        // Replace separators with a styled <hr> tag
+        message = message.replace(separatorRegex, '<hr class="separator">');
+
+        // Check if the message starts with "*", indicating the first message of a block
+        if (message.startsWith("*")) {
+            message = `<span style="color: #ff8080;">${message.substring(1)}</span>`; // Remove "*" and apply red color
+        }
+
+        consoleDiv.innerHTML += message + "<br>";
+        consoleDiv.scrollTop = consoleDiv.scrollHeight;
+    };
+</script>
+
+</body>
+</html>
