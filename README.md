@@ -95,3 +95,9 @@ This project is open-source and free to use.
 
 ---
 
+## 📸 Screenshot
+
+![Screenshot 2025-02-17 112012](https://github.com/user-attachments/assets/8c355f60-837d-4261-8633-b8c0852183f5)
+
+---
+
