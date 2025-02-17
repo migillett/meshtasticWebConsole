@@ -1,7 +1,7 @@
 # Meshtastic Web Console
 
 ## Overview
-The **Meshtastic Web Console** is a real-time logging application developed in python that connects to a Meshtastic node via WiFi and displays incoming messages in:
+The **Meshtastic Web Console** is a (SIMPLE) real-time logging application developed in python that connects to a Meshtastic node via WiFi and displays incoming messages in:
 - **Terminal output**
 - **A web-based console with real-time streaming**
 - **A log file (`logoutput.txt`) with up to 50,000 retained lines**
