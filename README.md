@@ -101,3 +101,10 @@ This project is open-source and free to use.
 
 ---
 
+## 📝 To Do
+
+- Handle TRACEROUTE_APP Messaging
+- Implement Encryption
+- Restart command/endpoint 
+- Implement Bluetooth
+- Implement a node.db for message correlation
