@@ -1,22 +1,22 @@
 # Simple program to connect to a Meshtastic node and listen for incoming messages
-import meshtastic.tcp_interface
-from flask import Flask, Response, render_template
 import threading
 import time
 import datetime
-import os
-
+from datetime import datetime, UTC, timedelta, timezone
+from os import environ
 
 from pubsub import pub
+from meshtastic.tcp_interface import TCPInterface
 from meshtastic.protobuf import mesh_pb2, telemetry_pb2, portnums_pb2
 from google.protobuf.json_format import MessageToDict
+from flask import Flask, Response, render_template
 from collections import deque
 
 # Config
-NODE_IP = "192.168.86.243"
-TIME_DISPLAY = "central"  # utc, central, epoch by default (empty)
-LOG_FILE = "logoutput.txt"
-MAX_LOG_LINES = 50000  # User-defined maximum number of lines for the log file
+NODE_IP = environ.get('NODE_IP', '127.0.0.1') # if None, default to localhost
+TIME_DISPLAY = environ.get('TIME_DISPLAY', 'epoch')  # utc, central, epoch
+LOG_FILE = environ.get('LOG_FILE', 'logoutput.txt')
+MAX_LOG_LINES = int(environ.get('MAX_LOG_LINES', 50000))  # User-defined maximum number of lines for the log file
 
 log_buffer = []
 log_deque = deque(maxlen=MAX_LOG_LINES)  # Keep track of logs in memory
@@ -38,11 +38,11 @@ def log_output(message, first_in_block=False):
         log_file.writelines("\n".join(log_deque) + "\n")
 
 
-def format_timestamp(timestamp):
+def format_timestamp(timestamp: int | str) -> str:
     if isinstance(timestamp, int) and timestamp > 0:
-        utc_time = datetime.datetime.fromtimestamp(timestamp, datetime.UTC).strftime('%Y-%m-%d %H:%M:%S UTC')
-        central_time = datetime.datetime.fromtimestamp(
-            timestamp, datetime.timezone(datetime.timedelta(hours=-6))
+        utc_time = datetime.fromtimestamp(timestamp, UTC).strftime('%Y-%m-%d %H:%M:%S UTC')
+        central_time = datetime.fromtimestamp(
+            timestamp, timezone(timedelta(hours=-6))
         ).strftime('%Y-%m-%d %H:%M:%S CST')
 
         if TIME_DISPLAY == 'central':
@@ -61,7 +61,7 @@ def event_stream():
         time.sleep(0.1)
 
 
-def print_local_node_info(node_info):
+def print_local_node_info(node_info: dict) -> None:
     """Prints local node information, formats battery level, timestamps, and generates a map link."""
     log_output("-----------------------")
     log_output("----LOCAL NODE INFO----",first_in_block=True)  # This is the first message in a block
@@ -94,7 +94,7 @@ def print_local_node_info(node_info):
     if latitude is not None and longitude is not None:
         log_output(f" - Map Link: https://www.google.com/maps?q={latitude},{longitude}")
 
-def on_receive(packet, interface):
+def on_receive(packet: dict, interface: TCPInterface) -> None:
     """Callback function to handle received messages."""
     decoded = packet.get("decoded", {})
     log_output("-----------------------")
@@ -201,7 +201,7 @@ def on_receive(packet, interface):
 
 # Establish connection
 log_output(f"Connecting to Meshtastic node at {NODE_IP}")
-iface = meshtastic.tcp_interface.TCPInterface(NODE_IP)
+iface = TCPInterface(NODE_IP)
 log_output("Connection established successfully!")
 
 # Fetch node info explicitly
