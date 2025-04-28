@@ -19,7 +19,7 @@ The **Meshtastic Web Console** is a (SIMPLE) real-time logging application devel
 ## 🔧 Installation
 
 ### **1️⃣ Install Python & Virtual Environment**
-Ensure you have **Python 3.8+** installed.
+Ensure you have **Python 3.10+** installed.
 
 ```sh
 # Create and activate a virtual environment
