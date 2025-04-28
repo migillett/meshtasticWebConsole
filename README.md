@@ -50,12 +50,12 @@ This will:
 ---
 
 ## ⚙️ Configuration Parameters
-Modify these in `main.py` before running:
+Modify these in `.env` before running:
 
 | Parameter          | Default Value      | Description |
 |-------------------|--------------------|-------------|
-| `node_ip`         | `"192.168.xx.xxx"` | IP Address of the Meshtastic node |
-| `time_display`    | `"central"`        | Timestamp format (`epoch`, `utc`, or `central`) |
+| `NODE_IP`         | `"192.168.xx.xxx"` | IP Address of the Meshtastic node |
+| `TIME_DISPLAY`    | `"central"`        | Timestamp format (`epoch`, `utc`, or `central`) |
 | `LOG_FILE`        | `"logoutput.txt"`  | Path to the log file |
 | `MAX_LOG_LINES`   | `50000`            | Maximum lines retained in the log file |
 
@@ -102,7 +102,6 @@ This project is open-source and free to use.
 ---
 
 ## 📝 To Do
-
 - Handle TRACEROUTE_APP Messaging
 - Implement Encryption
 - Restart command/endpoint 
