@@ -122,9 +122,6 @@ def on_receive(packet: dict, interface: TCPInterface) -> None:
                 position_dict = MessageToDict(position)
                 for key, value in position_dict.items():
                     log_output(f" - {key}: {value}")
-                position = mesh_pb2.Position()
-                position.ParseFromString(payload)
-                position_dict = MessageToDict(position)
                 if "latitudeI" in position_dict and "longitudeI" in position_dict:
                     latitude = position_dict["latitudeI"] / 10 ** 7
                     longitude = position_dict["longitudeI"] / 10 ** 7
