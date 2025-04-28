@@ -2,12 +2,14 @@
 import threading
 import time
 import datetime
-from datetime import datetime, UTC, timedelta, timezone
+from datetime import datetime, UTC
 from os import environ
+import json
 
 from pubsub import pub
 from meshtastic.tcp_interface import TCPInterface
-from meshtastic.protobuf import mesh_pb2, telemetry_pb2, portnums_pb2
+from meshtastic.protobuf import mesh_pb2, telemetry_pb2
+from meshtastic.protobuf.portnums_pb2 import PortNum
 from google.protobuf.json_format import MessageToDict
 from flask import Flask, Response, render_template
 from collections import deque
@@ -101,90 +103,92 @@ def on_receive(packet: dict, interface: TCPInterface) -> None:
     )
 
     portnum_str = decoded.get("portnum", "UNKNOWN")
-    portnum = getattr(portnums_pb2.PortNum, portnum_str, None)
+    portnum = getattr(PortNum, portnum_str, None)
     payload = decoded.get("payload", None)
 
     if payload:
         try:
-            if portnum == portnums_pb2.PortNum.TEXT_MESSAGE_APP:
-                log_output(f" - Decoded Text Message: {decoded.get('text', 'N/A')}")
-                for key, value in decoded.items():
-                    log_output(f" - {key}: {value}")
+            match portnum:
+                case PortNum.TEXT_MESSAGE_APP:
+                    log_output(f" - Decoded Text Message: {decoded.get('text', 'N/A')}")
+                    for key, value in decoded.items():
+                        log_output(f" - {key}: {value}")
 
-            elif portnum == portnums_pb2.PortNum.POSITION_APP:
-                #log_output("Full Position Dict:")
-                position = mesh_pb2.Position()
-                position.ParseFromString(payload)
-                position_dict = MessageToDict(position)
-                for key, value in position_dict.items():
-                    log_output(f" - {key}: {value}")
-                if "latitudeI" in position_dict and "longitudeI" in position_dict:
-                    latitude = position_dict["latitudeI"] / 10 ** 7
-                    longitude = position_dict["longitudeI"] / 10 ** 7
-                    log_output(f" - Map Link: https://www.google.com/maps?q={latitude},{longitude}")
-                    log_output(f" - GPS Coordinates: ({latitude}, {longitude})")
-                else:
-                    log_output(" - Err: Position data structure is different than expected.")
-
-            elif portnum == portnums_pb2.PortNum.TELEMETRY_APP:
-                telemetry = telemetry_pb2.Telemetry()
-                telemetry.ParseFromString(payload)
-                telemetry_dict = MessageToDict(telemetry)
-
-                for key, value in telemetry_dict.items():
-                    if isinstance(value, dict):  # Handle nested dictionaries like deviceMetrics and localStats
-                        log_output(f" - {key}:")  # Print the category name
-                        for sub_key, sub_value in value.items():
-                            if key == "deviceMetrics" and sub_key == "batteryLevel":
-                                battery_level = float(sub_value)  # Ensure it's treated as a float
-                                battery_display = f"{battery_level}%" if battery_level <= 100 else "Powered"
-                                log_output(f"   - {sub_key}: {battery_display}")
-                            else:
-                                log_output(f"   - {sub_key}: {sub_value}")
+                case PortNum.POSITION_APP:
+                    #log_output("Full Position Dict:")
+                    position = mesh_pb2.Position()
+                    position.ParseFromString(payload)
+                    position_dict = MessageToDict(position)
+                    for key, value in position_dict.items():
+                        log_output(f" - {key}: {value}")
+                    if "latitudeI" in position_dict and "longitudeI" in position_dict:
+                        latitude = position_dict["latitudeI"] / 10 ** 7
+                        longitude = position_dict["longitudeI"] / 10 ** 7
+                        log_output(f" - Map Link: https://www.google.com/maps?q={latitude},{longitude}")
+                        log_output(f" - GPS Coordinates: ({latitude}, {longitude})")
                     else:
+                        log_output(" - Err: Position data structure is different than expected.")
+
+                case PortNum.TELEMETRY_APP:
+                    telemetry = telemetry_pb2.Telemetry()
+                    telemetry.ParseFromString(payload)
+                    telemetry_dict = MessageToDict(telemetry)
+
+                    for key, value in telemetry_dict.items():
+                        if isinstance(value, dict):  # Handle nested dictionaries like deviceMetrics and localStats
+                            log_output(f" - {key}:")  # Print the category name
+                            for sub_key, sub_value in value.items():
+                                if key == "deviceMetrics" and sub_key == "batteryLevel":
+                                    battery_level = float(sub_value)  # Ensure it's treated as a float
+                                    battery_display = f"{battery_level}%" if battery_level <= 100 else "Powered"
+                                    log_output(f"   - {sub_key}: {battery_display}")
+                                else:
+                                    log_output(f"   - {sub_key}: {sub_value}")
+                        else:
+                            log_output(f" - {key}: {value}")
+
+                case PortNum.NODEINFO_APP:
+                    try:
+                        user_info = mesh_pb2.User()
+                        user_info.ParseFromString(payload)
+                        user_dict = MessageToDict(user_info)
+
+                        log_output("Full Node Info:")
+                        for key, value in user_dict.items():
+                            log_output(f" - {key}: {value}")
+
+                        #log_output(f" - Long Name: {user_dict.get('longName', 'N/A')}")
+                        #log_output(f" - Short Name: {user_dict.get('shortName', 'N/A')}")
+                        #log_output(f" - Hardware Model: {user_dict.get('hwModel', 'N/A')}")
+
+                    except Exception as e:
+                        log_output(f"Error decoding NODEINFO_APP payload: {e}")
+                        log_output(f"Payload string: {payload}")
+
+                case PortNum.NEIGHBORINFO_APP:
+                    neighbor_info = mesh_pb2.NeighborInfo()
+                    neighbor_info.ParseFromString(payload)
+                    neighbor_dict = MessageToDict(neighbor_info)
+
+                    log_output("Full Neighbor Dict:")
+                    for key, value in neighbor_dict.items():
                         log_output(f" - {key}: {value}")
 
-            elif portnum == portnums_pb2.PortNum.NODEINFO_APP:
-                try:
-                    user_info = mesh_pb2.User()
-                    user_info.ParseFromString(payload)
-                    user_dict = MessageToDict(user_info)
+                    log_output(f" - Node ID: {neighbor_dict.get('nodeId', 'N/A')}")
+                    log_output(f" - Last Heard: {format_timestamp(neighbor_dict.get('last_heard', 'N/A'))}")
 
-                    log_output("Full Node Info:")
-                    for key, value in user_dict.items():
-                        log_output(f" - {key}: {value}")
+                    if "neighbors" in neighbor_dict and isinstance(neighbor_dict["neighbors"], list):
+                        log_output(" - Neighbors:")
+                        for neighbor in neighbor_dict["neighbors"]:
+                            log_output(f"   - Neighbor Node ID: {neighbor.get('nodeId', 'N/A')}")
+                            log_output(f"   - RSSI: {neighbor.get('rssi', 'N/A')}")
+                            log_output(f"   - SNR: {neighbor.get('snr', 'N/A')}")
+                    else:
+                        log_output(" - No neighbors found.")
 
-                    #log_output(f" - Long Name: {user_dict.get('longName', 'N/A')}")
-                    #log_output(f" - Short Name: {user_dict.get('shortName', 'N/A')}")
-                    #log_output(f" - Hardware Model: {user_dict.get('hwModel', 'N/A')}")
-
-                except Exception as e:
-                    log_output(f"Error decoding NODEINFO_APP payload: {e}")
-                    log_output(f"Payload string: {payload}")
-
-            elif portnum == portnums_pb2.PortNum.NEIGHBORINFO_APP:
-                neighbor_info = mesh_pb2.NeighborInfo()
-                neighbor_info.ParseFromString(payload)
-                neighbor_dict = MessageToDict(neighbor_info)
-
-                log_output("Full Neighbor Dict:")
-                for key, value in neighbor_dict.items():
-                    log_output(f" - {key}: {value}")
-
-                log_output(f" - Node ID: {neighbor_dict.get('nodeId', 'N/A')}")
-                log_output(f" - Last Heard: {format_timestamp(neighbor_dict.get('last_heard', 'N/A'))}")
-
-                if "neighbors" in neighbor_dict and isinstance(neighbor_dict["neighbors"], list):
-                    log_output(" - Neighbors:")
-                    for neighbor in neighbor_dict["neighbors"]:
-                        log_output(f"   - Neighbor Node ID: {neighbor.get('nodeId', 'N/A')}")
-                        log_output(f"   - RSSI: {neighbor.get('rssi', 'N/A')}")
-                        log_output(f"   - SNR: {neighbor.get('snr', 'N/A')}")
-                else:
-                    log_output(" - No neighbors found.")
-
-            else:
-                log_output(f"Received data on an unknown port: {portnum_str}")
+                case _:
+                    log_output(f"Received data on an unknown port: {portnum_str}")
+                    print(json.dumps(packet, default=str))
                 
         except Exception as e:
             log_output(f"Error decoding payload: {e}")
