@@ -114,7 +114,6 @@ def on_receive(packet: dict, interface: TCPInterface) -> None:
                 for key, value in decoded.items():
                     log_output(f" - {key}: {value}")
 
-
             elif portnum == portnums_pb2.PortNum.POSITION_APP:
                 #log_output("Full Position Dict:")
                 position = mesh_pb2.Position()
@@ -166,7 +165,6 @@ def on_receive(packet: dict, interface: TCPInterface) -> None:
                     log_output(f"Error decoding NODEINFO_APP payload: {e}")
                     log_output(f"Payload string: {payload}")
 
-
             elif portnum == portnums_pb2.PortNum.NEIGHBORINFO_APP:
                 neighbor_info = mesh_pb2.NeighborInfo()
                 neighbor_info.ParseFromString(payload)
@@ -187,8 +185,10 @@ def on_receive(packet: dict, interface: TCPInterface) -> None:
                         log_output(f"   - SNR: {neighbor.get('snr', 'N/A')}")
                 else:
                     log_output(" - No neighbors found.")
+
             else:
-                log_output("Received data on an unknown port.")
+                log_output(f"Received data on an unknown port: {portnum_str}")
+                
         except Exception as e:
             log_output(f"Error decoding payload: {e}")
             log_output(f"Payload string: {payload}")
