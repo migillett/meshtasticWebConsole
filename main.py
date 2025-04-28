@@ -4,7 +4,7 @@ import time
 import datetime
 from datetime import datetime, UTC
 from os import environ
-import json
+from collections import deque
 
 from pubsub import pub
 from meshtastic.tcp_interface import TCPInterface
@@ -12,7 +12,6 @@ from meshtastic.protobuf import mesh_pb2, telemetry_pb2
 from meshtastic.protobuf.portnums_pb2 import PortNum
 from google.protobuf.json_format import MessageToDict
 from flask import Flask, Response, render_template
-from collections import deque
 
 # Config
 NODE_IP = environ.get('NODE_IP', '127.0.0.1') # if None, default to localhost
@@ -188,7 +187,6 @@ def on_receive(packet: dict, interface: TCPInterface) -> None:
 
                 case _:
                     log_output(f"Received data on an unknown port: {portnum_str}")
-                    print(json.dumps(packet, default=str))
                 
         except Exception as e:
             log_output(f"Error decoding payload: {e}")
