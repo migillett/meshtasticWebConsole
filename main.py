@@ -14,7 +14,7 @@ from collections import deque
 
 # Config
 NODE_IP = environ.get('NODE_IP', '127.0.0.1') # if None, default to localhost
-TIME_DISPLAY = environ.get('TIME_DISPLAY', 'epoch')  # utc, central, epoch
+TIME_DISPLAY = environ.get('TIME_DISPLAY', 'epoch').lower()  # local, utc, epoch
 LOG_FILE = environ.get('LOG_FILE', 'logoutput.txt')
 MAX_LOG_LINES = int(environ.get('MAX_LOG_LINES', 50000))  # User-defined maximum number of lines for the log file
 
@@ -40,16 +40,13 @@ def log_output(message, first_in_block=False):
 
 def format_timestamp(timestamp: int | str) -> str:
     if isinstance(timestamp, int) and timestamp > 0:
-        utc_time = datetime.fromtimestamp(timestamp, UTC).strftime('%Y-%m-%d %H:%M:%S UTC')
-        central_time = datetime.fromtimestamp(
-            timestamp, timezone(timedelta(hours=-6))
-        ).strftime('%Y-%m-%d %H:%M:%S CST')
-
-        if TIME_DISPLAY == 'central':
-            return central_time
-        elif TIME_DISPLAY == 'utc':
-            return utc_time
-        return str(timestamp)  # Default to epoch if no valid option is passed
+        match TIME_DISPLAY:
+            case 'local':
+                return datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
+            case 'utc':
+                return datetime.fromtimestamp(timestamp, UTC).strftime('%Y-%m-%d %H:%M:%S UTC')
+            case _:
+                return str(timestamp)  # Default to epoch if no valid option is passed
     return "N/A"
 
 
